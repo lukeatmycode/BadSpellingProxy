@@ -23,6 +23,11 @@ int proxyWebSock;
 int dataConnection;
 
 string changeHeader(string header){
+    string contentType = header.substr(header.find("Content-Type:"), header.find("\r\n", header.find("Content-Type:")));
+    string newContent = "Content-Type: text/html\r\n";
+    string changed = header.replace(header.find(contentType), contentType.length(), newContent);
+    cout << "Changed header:*" << changed << "*****"<< endl;
+
 
     return header;
 }
@@ -370,10 +375,11 @@ int main(int argc, char *argv[]) {
         if(textPlain == string::npos && textHTML == string::npos) {
             shouldEdit = false; //dont mess with page if it isn't html or text
         }
-        cout << "Header: " << endl << header;
+        //cout << "Header: " << endl << header;
 
         
         if(shouldEdit) {
+            cout << endl << "Changing" << endl;
             header = changeHeader(header); //The header needs to be changed to Content-type: text/html to allow for bolding;
             page = received.substr(received.find("\r\n\r\n"));
             page.replace(page.find("\r\n\r\n"), strlen("\r\n\r\n"), ""); //the page contents for modification
