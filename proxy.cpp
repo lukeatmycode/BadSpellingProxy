@@ -231,7 +231,7 @@ int main(int argc, char *argv[]) {
             if(cache == string::npos) flag = true;
         } while(flag); //if the buffer was full, keep checking for more content
 
-        cout << "From client: " << endl << request << endl;
+        cout << "From client: " << endl << request << endl << "*************End***************" << endl;
         
         
         vector<char> sendMsg(request.begin(), request.end()); //copy the message for sending to web server eventually
@@ -275,7 +275,6 @@ int main(int argc, char *argv[]) {
         string url = GET.substr(GET.find(" ")+1, GET.find("\r\n")); //The isolated url
         url = stripProtocol(url); //get rid of http or https in url
         string host = url.substr(0,url.find("/")); //just the host, path begins after the first slash
-        cout << "First*" <<  host << "*****" << endl;
         string path = url.substr(url.find("/"), url.length());//path includes the first slash, till the end of the URL
         
         //if there is a host header, just use that.
@@ -284,7 +283,6 @@ int main(int argc, char *argv[]) {
             host = host.substr(host.find(" ")+1);
             int trim = host.length() - host.find("\r\n");
             host = host.erase(host.find("\r\n"), trim);
-            cout << "Host*" << host << "*******" << endl;
         }
         
         //Now, as a client, create an address
@@ -303,7 +301,7 @@ int main(int argc, char *argv[]) {
         addressServer.sin_family = AF_INET;
         addressServer.sin_port = htons(80);
         bcopy((char *) server->h_addr, (char *) &addressServer.sin_addr.s_addr, server->h_length);
-        cout << "Client Address Initialized..." <<endl;
+        cout << "Server Address Initialized..." <<endl;
 
         //create a client-webserver socket
         proxyWebSock = socket(AF_INET, SOCK_STREAM, 0);
@@ -360,15 +358,21 @@ int main(int argc, char *argv[]) {
         //close the connection with webserver, done with it
         close(proxyWebSock);
 
-        //Need to parse the output from the webserver, we only want to change text/plain or text/html
+        //Need to parse the output from the webserver, we only want to change text/plain or text/html, leave other content alone
         string header;
+        string page;
         header = received.substr(0, received.find("\r\n\r\n")); //isolates the header
+        //complicated line of code below, finds the line where content type is specified
+        string contentType = header.substr(header.find("Content-Type:"), header.find("\r\n", header.find("Content-Type:")));
+        size_t textPlain = contentType.find("text/plain");
+        size_t textHTML = contentType.find("text/html");
 
+        if(textPlain == string::npos && textHTML == string::npos) {
+            shouldEdit = false; //dont mess with page if it isn't html or text
+        }
         cout << "Header: " << endl << header;
 
-        //if the request is HTTP 1.1, break out the header and page response
         
-        string page;
         if(shouldEdit) {
             header = changeHeader(header); //The header needs to be changed to Content-type: text/html to allow for bolding;
             page = received.substr(received.find("\r\n\r\n"));
