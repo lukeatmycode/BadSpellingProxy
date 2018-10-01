@@ -247,7 +247,10 @@ int main(int argc, char *argv[]) {
     //bind the socket for listening
     int status = bind(listenSock, (struct sockaddr *) &address, sizeof(struct sockaddr_in));
     if(status == -1) {
-        cout << "Binding failed" << endl;
+        cout << "Binding failed!" << endl;
+        cout << "Please make an offering to the network gods, wait a minute, recompile, start and restart the server 3 times,";
+        cout << " or any combination of the above. For some reason this just happens and then fixes itself." << endl;
+        cout << "Yes, it really do be like that sometimes" << endl;
         raise(SIGINT);
     } else {
         cout << "Server socket bound successfully!" << endl;
@@ -289,7 +292,7 @@ int main(int argc, char *argv[]) {
             if(cache == string::npos) flag = true;
         } while(flag); //if the buffer was full, keep checking for more content
 
-        cout << "From client: " << endl << request << endl << "*************End***************" << endl;
+        //cout << "**********From client:***************" << endl << request << endl << "***********************" << endl;
         
         
         vector<char> sendMsg(request.begin(), request.end()); //copy the message for sending to web server eventually
@@ -411,7 +414,7 @@ int main(int argc, char *argv[]) {
         } while(bytesFromWeb > 0); //if the buffer was full, keep checking for more content
        
         //should have the response, debug print out to make sure
-        //cout << endl << "From webserver: " << endl << received <<endl<<endl;
+        cout << endl << "**********From webserver:**************" << endl << received << endl << "*********************" << endl;
          
         //close the connection with webserver, done with it
         close(proxyWebSock);
@@ -420,20 +423,30 @@ int main(int argc, char *argv[]) {
         string header;
         string page;
         header = received.substr(0, received.find("\r\n\r\n")); //isolates the header
+        string code = header.substr(header.find(" ")+1, 3); //get the http code
+        int httpCode = stoi(code);
+
+        if(httpCode > 399) {
+
+            shouldEdit = false;
+        }
+        
         //complicated line of code below, finds the line where content type is specified
         string contentType = header.substr(header.find("Content-Type:"), header.find("\r\n", header.find("Content-Type:")));
         size_t textPlain = contentType.find("text/plain");
         size_t textHTML = contentType.find("text/html");
+        
 
         if(textPlain == string::npos && textHTML == string::npos) {
             shouldEdit = false; //dont mess with page if it isn't html or text
+            //cout << "****************Not text or html*******************" << endl;
         }
-        cout << "*******RECEIVED HEADER RESPONSE HEADER ******* " << endl << header << endl << "******END******" << endl;
-
+        //cout << "*******RECEIVED HEADER RESPONSE HEADER ******* " << endl << header << endl << "******END******" << endl;
+        //dont mess with files if you dont want to put any errors into it.
         if(numErr < 1) {
             shouldEdit = false;
         }
-        
+    
         if(shouldEdit) {
             //cout << endl << "Changing" << endl;
             page = received.substr(received.find("\r\n\r\n"));
@@ -456,19 +469,29 @@ int main(int argc, char *argv[]) {
             received = header + "\r\n\r\n" + page; //recombine the header and content
         }
         vector<char> sendClient(received.begin(), received.end());
+        /*
+        cout << endl << "**********sendClient:**************" << endl;
+        for(int i = 0; i < sendClient.size(); i++) {
+            cout << sendClient[i];
+        }
+        cout << endl <<  "SendClient.size(): " << sendClient.size();
+         cout << endl << "*********************" << endl;
+
+        cout << "****sizeof()Send Client: " << to_string(sizeof(&sendClient[0])) << endl; 
+        */
         char *sendFinal = &sendClient[0];
-        strcpy(sendFinal,received.c_str());  
-        
+        //strcpy(sendFinal,received.c_str());
+        /*
         cout << endl << "**********Sending this message to client*************** " << endl;
-        for(int i=0;i!=strlen(sendFinal); i++){
+        for(int i=0;i < strlen(sendFinal); i++){
             cout << sendFinal[i];
         }
         cout << endl << "********End message********" << endl; 
-        
+        */
 
         //send modified content to client
         int deliver;
-        deliver = send(dataConnection, sendFinal, strlen(sendFinal), 0);
+        deliver = send(dataConnection, sendFinal, sendClient.size(), 0);
         if(deliver == -1) {
             cout << "Sending to client failed! :(" <<endl;
         } else {
