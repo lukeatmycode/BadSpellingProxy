@@ -21,15 +21,21 @@ const int BUFFERSIZE = 1024; //define here for easy tweaking
 int listenSock;
 int proxyWebSock;
 int dataConnection;
+int newLength;
 
 string changeHeader(string header){
     string contentType = header.substr(header.find("Content-Type:"), header.find("\r\n", header.find("Content-Type:")));
     string newContent = "Content-Type: text/html\r\n";
     string changed = header.replace(header.find(contentType), contentType.length(), newContent);
-    cout << "Changed header:*" << changed << "*****"<< endl;
 
+    cout << endl << "*******AFTER TYPE SWITCH***********" << endl << changed << endl << "***************" << endl;
 
-    return header;
+    string contentLength = changed.substr(header.find("Content-Length:"), changed.find("\r\n", changed.find("Content-Length:")));
+    string newCL = "Content-Length: " + to_string(newLength) + "\r\n";
+    changed = changed.replace(changed.find(contentLength), contentLength.length()-1, newCL);
+
+    cout << "*******AFTER LENGTH SWITCH**********" << endl << changed << endl << "****************"<<endl;
+    return changed;
 }
 
 bool notInBody(int i, string msg) {
@@ -43,6 +49,31 @@ bool notInBody(int i, string msg) {
 
     return true;
 }
+
+bool notInBold(int i, string msg) {
+    //checks if index i of string msg is inside of a bold tag
+    size_t start = msg.find("<b>");
+    size_t finish = msg.find("</b>");
+
+    if(start == string::npos || finish == string::npos) return false; //there is no body tags, so insert wherever
+
+    if(i > start && i < finish) return false;
+
+    return true;
+}
+
+bool notInHeader(int i, string msg) {
+    //checks if index i of string msg is inside of a bold tag
+    size_t start = msg.find("<h1>");
+    size_t finish = msg.find("</h1>");
+
+    if(start == string::npos || finish == string::npos) return false; //there is no body tags, so insert wherever
+
+    if(i > start && i < finish) return false;
+
+    return true;
+}
+
 bool isInTag(int i, string msg) {
     //checks if character in msg at index i is inside of HTML tag
     const char * edits = msg.c_str();
@@ -81,13 +112,7 @@ string scrambler(string msg, int numErrors){
     string newMsg = msg;
     srand(time(0)); //seed the random integer generator
     for(int i = 0; i<numErrors;i++){
-        char c;
-        c = (rand() % 26 ) + 'a';
-
-        //string toInsert = "<b></b>";
-        string toInsert;
-        toInsert.insert(0, 1, c);
-
+        
         //swapping index
         int swap = rand() % newMsg.length();
         int ok = isspace(newMsg.at(swap)); //check if the swap is on a whitespace
@@ -97,12 +122,23 @@ string scrambler(string msg, int numErrors){
             swap = rand() % newMsg.length(); //make a new index for swapping
             ok = isspace(newMsg.at(swap));  //check if its a whitespace
         }
-        
+
+        char c;
+        c = (rand() % 26 ) + 'a';
+        string toInsert;
+
+        if(notInHeader(swap, newMsg) && notInBold(swap, newMsg)) {
+            toInsert = "<b></b>"; //bold the mistake
+            toInsert.insert(3,1,c); //insert the mistake into tags
+        } else {
+            toInsert.insert(0, 1, c);
+        }
         //cout << "Inserting " << c << " at " << swap << endl;
-        newMsg.erase(swap,1);
-        newMsg.insert(swap, toInsert);
+        newMsg.replace(swap, 1, toInsert);
+
     }
 
+    newLength = newMsg.length();
     return newMsg;
 
 }
@@ -375,22 +411,24 @@ int main(int argc, char *argv[]) {
         if(textPlain == string::npos && textHTML == string::npos) {
             shouldEdit = false; //dont mess with page if it isn't html or text
         }
-        //cout << "Header: " << endl << header;
+        cout << "*******RECEIVED HEADER RESPONSE HEADER ******* " << endl << header << endl << "**************" << endl;
 
         
         if(shouldEdit) {
             cout << endl << "Changing" << endl;
-            header = changeHeader(header); //The header needs to be changed to Content-type: text/html to allow for bolding;
             page = received.substr(received.find("\r\n\r\n"));
             page.replace(page.find("\r\n\r\n"), strlen("\r\n\r\n"), ""); //the page contents for modification
             page = scrambler(page,numErr); //scramble the contents 
+            
+            header = changeHeader(header); //The header needs to be changed to Content-type: text/html to allow for bolding;
+
             received = header + "\r\n\r\n" + page; //recombine the header and content
         }
         vector<char> sendClient(received.begin(), received.end());
         char *sendFinal = &sendClient[0];
         strcpy(sendFinal,received.c_str());  
         
-        cout << endl << "Sending this message to client: " << endl;
+        cout << endl << "**********Sending this message to client*************** " << endl;
         for(int i=0;i!=strlen(sendFinal); i++){
             cout << sendFinal[i];
         }
