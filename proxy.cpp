@@ -27,21 +27,21 @@ string changeHeader(string header){
     int typeStart = header.find("Content-Type:");
     int typeEnd = header.find("\r\n", typeStart+1)+2; //adding two to account for line ends
     string contentType = header.substr(typeStart, typeEnd-typeStart);
-    cout << "****" << endl << contentType << endl << "******" << endl;
+    //cout << "****" << endl << contentType << endl << "******" << endl;
     string newContent = "Content-Type: text/html\r\n";
     string changed = header.replace(header.find(contentType), contentType.length(), newContent);
 
-    cout << endl << "*******AFTER TYPE SWITCH***********" << endl << changed << endl << "***************" << endl;
+    //cout << endl << "*******AFTER TYPE SWITCH***********" << endl << changed << endl << "***************" << endl;
 
     int lenStart = changed.find("Content-Length: ");
     int lenEnd = changed.find("\r\n",lenStart+1) + 2;
     string contentLength = changed.substr(lenStart,lenEnd-lenStart);
-    cout << "***" << endl << contentLength << endl << "****" << endl;
+    //cout << "***" << endl << contentLength << endl << "****" << endl;
     string newCL = "Content-Length: " + to_string(newLength) + "\r\n";
     changed = changed.erase(changed.find(contentLength), contentLength.length());
     changed = changed.append(newCL);
 
-    cout << "*******AFTER LENGTH SWITCH**********" << endl << changed << endl << "****************"<<endl;
+    //cout << "*******AFTER LENGTH SWITCH**********" << endl << changed << endl << "****************"<<endl;
     return changed;
 }
 
@@ -57,12 +57,22 @@ bool notInBody(int i, string msg) {
     return true;
 }
 
+bool isHTML(string msg) {
+    //checks if index i of string msg is inside of a body tag
+    size_t start = msg.find("<html>");
+    size_t finish = msg.find("</html>");
+
+    if(start == string::npos || finish == string::npos) return false; //there is no html tags
+
+    return true;
+}
+
 bool notInBold(int i, string msg) {
     //checks if index i of string msg is inside of a bold tag
     size_t start = msg.find("<b>");
     size_t finish = msg.find("</b>");
 
-    if(start == string::npos || finish == string::npos) return false; //there is no body tags, so insert wherever
+    if(start == string::npos || finish == string::npos) return true; //there is no body tags, so insert wherever
 
     if(i > start && i < finish) return false;
 
@@ -74,7 +84,7 @@ bool notInHeader(int i, string msg) {
     size_t start = msg.find("<h1>");
     size_t finish = msg.find("</h1>");
 
-    if(start == string::npos || finish == string::npos) return false; //there is no body tags, so insert wherever
+    if(start == string::npos || finish == string::npos) return true; //there is no body tags, so insert wherever
 
     if(i > start && i < finish) return false;
 
@@ -425,6 +435,11 @@ int main(int argc, char *argv[]) {
             //cout << endl << "Changing" << endl;
             page = received.substr(received.find("\r\n\r\n"));
             page.replace(page.find("\r\n\r\n"), strlen("\r\n\r\n"), ""); //the page contents for modification
+            //add html tags if they dont have them already
+            if(!isHTML(page)){
+                page.insert(0,"<html>\r\n");
+                page.append("</html>");
+            }
             page = scrambler(page,numErr); //scramble the contents 
             
             header = changeHeader(header); //The header needs to be changed to Content-type: text/html to allow for bolding;
