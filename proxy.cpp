@@ -24,15 +24,22 @@ int dataConnection;
 int newLength;
 
 string changeHeader(string header){
-    string contentType = header.substr(header.find("Content-Type:"), header.find("\r\n", header.find("Content-Type:")));
+    int typeStart = header.find("Content-Type:");
+    int typeEnd = header.find("\r\n", typeStart+1)+2; //adding two to account for line ends
+    string contentType = header.substr(typeStart, typeEnd-typeStart);
+    cout << "****" << endl << contentType << endl << "******" << endl;
     string newContent = "Content-Type: text/html\r\n";
     string changed = header.replace(header.find(contentType), contentType.length(), newContent);
 
     cout << endl << "*******AFTER TYPE SWITCH***********" << endl << changed << endl << "***************" << endl;
 
-    string contentLength = changed.substr(header.find("Content-Length:"), changed.find("\r\n", changed.find("Content-Length:")));
+    int lenStart = changed.find("Content-Length: ");
+    int lenEnd = changed.find("\r\n",lenStart+1) + 2;
+    string contentLength = changed.substr(lenStart,lenEnd-lenStart);
+    cout << "***" << endl << contentLength << endl << "****" << endl;
     string newCL = "Content-Length: " + to_string(newLength) + "\r\n";
-    changed = changed.replace(changed.find(contentLength), contentLength.length()-1, newCL);
+    changed = changed.erase(changed.find(contentLength), contentLength.length());
+    changed = changed.append(newCL);
 
     cout << "*******AFTER LENGTH SWITCH**********" << endl << changed << endl << "****************"<<endl;
     return changed;
@@ -411,11 +418,11 @@ int main(int argc, char *argv[]) {
         if(textPlain == string::npos && textHTML == string::npos) {
             shouldEdit = false; //dont mess with page if it isn't html or text
         }
-        cout << "*******RECEIVED HEADER RESPONSE HEADER ******* " << endl << header << endl << "**************" << endl;
+        cout << "*******RECEIVED HEADER RESPONSE HEADER ******* " << endl << header << endl << "******END******" << endl;
 
         
         if(shouldEdit) {
-            cout << endl << "Changing" << endl;
+            //cout << endl << "Changing" << endl;
             page = received.substr(received.find("\r\n\r\n"));
             page.replace(page.find("\r\n\r\n"), strlen("\r\n\r\n"), ""); //the page contents for modification
             page = scrambler(page,numErr); //scramble the contents 
