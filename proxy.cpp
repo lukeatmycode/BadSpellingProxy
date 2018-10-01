@@ -212,11 +212,11 @@ int main(int argc, char *argv[]) {
     
     //Catch signal to ensure things close properly
     signal(SIGINT, proxyKiller);
-
     //Take user input to configure proxy
     int numErr;
     cout << "How many errors should be generated on the modified pages? ";
     cin >> numErr;
+  
     //cout << numErr << " errors will be generated" << endl;
     
     //User can set the port, by default it is 8001
@@ -408,7 +408,7 @@ int main(int argc, char *argv[]) {
             vector<char> recBuffer(begin(receiver), end(receiver));
             recBuffer.resize(bytesFromWeb); //discard any junk at the end of the buffer
             received.append(recBuffer.begin(), recBuffer.end());
-        } while(bytesFromWeb == BUFFERSIZE); //if the buffer was full, keep checking for more content
+        } while(bytesFromWeb > 0); //if the buffer was full, keep checking for more content
        
         //should have the response, debug print out to make sure
         //cout << endl << "From webserver: " << endl << received <<endl<<endl;
@@ -430,6 +430,9 @@ int main(int argc, char *argv[]) {
         }
         cout << "*******RECEIVED HEADER RESPONSE HEADER ******* " << endl << header << endl << "******END******" << endl;
 
+        if(numErr < 1) {
+            shouldEdit = false;
+        }
         
         if(shouldEdit) {
             //cout << endl << "Changing" << endl;
@@ -438,6 +441,12 @@ int main(int argc, char *argv[]) {
             //add html tags if they dont have them already
             if(!isHTML(page)){
                 page.insert(0,"<html>\r\n");
+                 //need to give new line characters
+                size_t endline = page.find("\n");
+                while(endline!=string::npos) {
+                    page.replace(endline,1,"</br>");
+                    endline = page.find("\n");
+                }
                 page.append("</html>");
             }
             page = scrambler(page,numErr); //scramble the contents 
