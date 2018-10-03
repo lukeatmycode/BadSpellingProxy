@@ -336,6 +336,7 @@ int main(int argc, char *argv[]) {
         string url = GET.substr(GET.find(" ")+1, GET.find("\r\n")); //The isolated url
         url = stripProtocol(url); //get rid of http or https in url
         string host = url.substr(0,url.find("/")); //just the host, path begins after the first slash
+        //cout << "First Host*" << host <<"***" << endl;
         string path = url.substr(url.find("/"), url.length());//path includes the first slash, till the end of the URL
         
         //if there is a host header, just use that.
@@ -344,9 +345,12 @@ int main(int argc, char *argv[]) {
             host = host.substr(host.find(" ")+1);
             int trim = host.length() - host.find("\r\n");
             host = host.erase(host.find("\r\n"), trim);
+            //cout << "Changing host to*" << host <<"***" << endl;
+
         }
         
         //Now, as a client, create an address
+        //cout << "Looking for host*" << host <<"***" << endl;
         struct hostent *server;
         server = gethostbyname(host.c_str());
         if(server == NULL){
